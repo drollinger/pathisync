@@ -2,7 +2,6 @@ import { walkSync } from "https://deno.land/std@0.184.0/fs/mod.ts";
 import { parse } from "https://deno.land/std@0.184.0/path/mod.ts";
 import inquirer from "npm:inquirer@^9.2.0";
 import fetch from "./client.ts";
-import { filter } from "../../../Library/Caches/deno/npm/registry.npmjs.org/@types/lodash/4.14.194/index.d.ts";
 
 export const getFiles = (dir: string): string[] => {
   const paths: string[] = [];
