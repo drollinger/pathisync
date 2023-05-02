@@ -14,14 +14,19 @@ Description: Library of all config files for Pathify flow server.
 
 ## Running the sync
 
-1. To sync flows, resources, shared configs, and triggers, use the command \`deno -A script.ts all\`
+1. To sync flows, resources, shared configs, and triggers, use the command \`./sync all\`
+    Note: The sync script has the permissions \`--allow-env\`, \`--allow-read\`, \`--allow-write\`, \`--allow-net\`. You can edit this file and remove these permissions and approve them at runtime if you want
 2. If there is anything out of sync with the server, a prompt will appear explaining differences and possible solutions
+3. By default, the sync will block the option to overwrite remote files and delete local files. To include deletion options, use the \`-f\` flag
+4. You can specify a specific config that you are working on to have the sync script watch the file and push any changes. To do this, use the command \`./sync -u path/to/_collection.json\`
+5. If you want the sync to default to updating local files you can use the \`-l\` flag
 
 
 ## Notes about syncing
 
-- Config files are located in the Pathify folder under their respective folder name
-- Flows, shared configs, and triggers only consist of a single widget file. These files must be named the same as the id/name in their file and end with \`.json\`
+- The sync command uses a remote script that deno caches. To update this script to the latest version you can use the command \`deno cache --reload https://deno.land/x/pathisync/script.ts\`
+- Config files are located in the Pathify folder under their respective folder names.
+- Flows, shared configs, and triggers only consist of a single widget file. These files must have the same name as the ID/name specified in the file and have a .json extension.
 - Resources consist of a folder with the same name as the collection id and inside of that folder, a \`\\_collection.json\` widget file
 - Each resource must be located in the same location and under the same file name listed in the resourceAccessorPath. This location is relative to the base folder for that collection
 - Single widget files and collection folders can be sorted into nesting folders within there respective folders
@@ -53,7 +58,9 @@ FLOW_SERVER_URL=https://<your.flow.server>
 `;
 
 export const script =
-  `import main from "https://deno.land/x/pathisync/script.ts";
+  `#!/usr/bin/env -S deno run --allow-env --allow-read --allow-write --allow-net
+
+import main from "https://deno.land/x/pathisync/script.ts";
 import { parse } from "https://deno.land/std@0.184.0/flags/mod.ts";
 main(parse(Deno.args));
 `;
