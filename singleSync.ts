@@ -1,4 +1,5 @@
 import { ensureDirSync } from "https://deno.land/std@0.184.0/fs/mod.ts";
+import { Args } from "https://deno.land/std@0.184.0/flags/mod.ts";
 import { join } from "https://deno.land/std@0.184.0/path/mod.ts";
 import fetch from "./client.ts";
 // @deno-types="npm:@types/inquirer"
@@ -18,43 +19,62 @@ import { optionType } from "./types.ts";
 
 const decoder = new TextDecoder("utf-8");
 
-// TODO Fix relative file paths so that they look good in logging and stuff
-export default async function singleSync(
-  topPath: string,
-  urlPath: string,
-  resourceType: string,
-  getName: (obj: any) => string,
-) {
+export default async function singleSync({
+  topPath,
+  urlPath,
+  resourceType,
+  getName,
+  args,
+  removeAttributes,
+}: {
+  topPath: string;
+  urlPath: string;
+  resourceType: string;
+  getName: (obj: any) => string;
+  args: Args;
+  removeAttributes?: (obj: any) => void;
+}) {
   const resp = await fetch(urlPath);
-  const body: optionType[] = await resp.json();
+  let body: optionType[];
+  try {
+    body = await resp.json();
+  } catch (_) {
+    console.log(
+      "The Pathify request failed. Please ensure you have an updated token in your .env file.",
+    );
+    Deno.exit(1);
+  }
   let files = getFiles(topPath).map((file) => join(Deno.cwd(), file));
 
   for (const flow of body) {
-    const file = findFile(topPath, getName(flow));
+    const file = findFile(topPath, `/${getName(flow)}.json`);
     if (file) {
       const localFlow = JSON.parse(
         decoder.decode(Deno.readFileSync(file)),
       ) as optionType;
       files = files.filter((f) => f !== file);
       delete flow.metadata;
+      if (removeAttributes) removeAttributes(flow);
       if (!_.isEqual(flow, localFlow)) {
         console.log(
           `\nThere is a difference with the ${resourceType} ${
             getName(flow)
           }\nlocated at ${file}`,
         );
-        const { option } = await inquirer.prompt([
-          {
-            name: "option",
-            type: "list",
-            message: "What do you want to do?",
-            choices: [
-              "Nothing",
-              `Overwrite local ${resourceType}`,
-              `Push local ${resourceType} to remote prod`,
-            ],
-          },
-        ]);
+        const { option } = args.l
+          ? { option: `Overwrite local ${resourceType}` }
+          : await inquirer.prompt([
+            {
+              name: "option",
+              type: "list",
+              message: "What do you want to do?",
+              choices: [
+                "Nothing",
+                `Overwrite local ${resourceType}`,
+                `Push local ${resourceType} to remote prod`,
+              ],
+            },
+          ]);
         if (option === `Overwrite local ${resourceType}`) writeFile(flow, file);
         if (option === `Push local ${resourceType} to remote prod`) {
           const resp = await pushConfig(urlPath, localFlow);
@@ -67,36 +87,42 @@ export default async function singleSync(
       console.log(
         `\nThe ${resourceType} ${getName(flow)} does not exist locally`,
       );
-      const { option } = await inquirer.prompt([
-        {
-          name: "option",
-          type: "list",
-          message: "What do you want to do?",
-          choices: [
-            "Nothing",
-            `Create new local ${resourceType}`,
-            `Delete remote prod ${resourceType}`,
-          ],
-        },
-      ]);
+      const { option } = args.l
+        ? { option: `Create new local ${resourceType}` }
+        : await inquirer.prompt([
+          {
+            name: "option",
+            type: "list",
+            message: "What do you want to do?",
+            choices: [
+              "Nothing",
+              `Create new local ${resourceType}`,
+              ...(args.d ? [`Delete remote prod ${resourceType}`] : []),
+            ],
+          },
+        ]);
       if (option === `Create new local ${resourceType}`) {
         let folderOptions = getDirs(topPath);
         folderOptions = folderOptions.map((folder) =>
           folder.split("/").slice(1).join("/")
         );
         folderOptions.push("<New Folder>");
-        let { folder } = await inquirer.prompt([
-          {
-            name: "folder",
-            type: "list",
-            message: "Choose a folder in " + topPath,
-            choices: folderOptions,
-          },
-        ]);
+        let { folder } = (args.l && args.f)
+          ? { folder: folderOptions[0] }
+          : await inquirer.prompt([
+            {
+              name: "folder",
+              type: "list",
+              message: "Choose a folder in " + topPath,
+              choices: folderOptions,
+            },
+          ]);
         if (folder === "<New Folder>") {
           folder = await promtNewFolder();
           ensureDirSync(`${topPath}/${folder}`);
         }
+        delete flow.metadata;
+        if (removeAttributes) removeAttributes(flow);
         writeFile(flow, `${topPath}/${folder}/${getName(flow)}.json`);
       }
       if (option === `Delete remote prod ${resourceType}`) {
@@ -111,12 +137,14 @@ export default async function singleSync(
     const localFlow = JSON.parse(
       decoder.decode(Deno.readFileSync(file)),
     ) as optionType;
-    console.log(
-      `\nThe remote prod doesn't have the ${resourceType} ${
-        getName(localFlow)
-      }\nlocated at ${file}`,
-    );
-    const { option } = await inquirer.prompt([
+    if (!args.l) {
+      console.log(
+        `\nThe remote prod doesn't have the ${resourceType} ${
+          getName(localFlow)
+        }\nlocated at ${file}`,
+      );
+    }
+    const { option } = args.l ? { option: "Nothing" } : await inquirer.prompt([
       {
         name: "option",
         type: "list",
@@ -124,7 +152,7 @@ export default async function singleSync(
         choices: [
           "Nothing",
           `Push new ${resourceType} to prod`,
-          `Delete local ${resourceType}`,
+          ...(args.d ? [`Delete local ${resourceType}`] : []),
         ],
       },
     ]);

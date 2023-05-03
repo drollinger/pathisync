@@ -3,6 +3,7 @@ import inquirer from "npm:inquirer@^9.2.0";
 import * as base64 from "https://deno.land/std@0.184.0/encoding/base64.ts";
 import { ensureDirSync } from "https://deno.land/std@0.184.0/fs/mod.ts";
 import { parse, relative } from "https://deno.land/std@0.184.0/path/mod.ts";
+import { Args } from "https://deno.land/std@0.184.0/flags/mod.ts";
 // @deno-types="npm:@types/lodash"
 import _ from "npm:lodash@^4.17.21";
 import {
@@ -19,7 +20,7 @@ import { resourceObj } from "./types.ts";
 const topPath = "resources";
 const utfDecoder = new TextDecoder("utf-8");
 
-export default async function main() {
+export default async function main(args: Args) {
   const resp = await fetch("/repository/resourceCollections");
   const body: resourceObj[] = await resp.json();
   let files = getFiles(topPath)
@@ -53,18 +54,20 @@ export default async function main() {
         console.log(
           `\nThere is a difference in _collection.json\nfor the collection ${collection.collectionId}`,
         );
-        const { option } = await inquirer.prompt([
-          {
-            name: "option",
-            type: "list",
-            message: "What do you want to do?",
-            choices: [
-              "Nothing",
-              "Overwrite local _collection.json",
-              "Push local _collection.json to remote prod",
-            ],
-          },
-        ]);
+        const { option } = args.l
+          ? { option: "Overwrite local _collection.json" }
+          : await inquirer.prompt([
+            {
+              name: "option",
+              type: "list",
+              message: "What do you want to do?",
+              choices: [
+                "Nothing",
+                "Overwrite local _collection.json",
+                "Push local _collection.json to remote prod",
+              ],
+            },
+          ]);
         if (option === "Overwrite local _collection.json") {
           finalLocalCollection = _.cloneDeep(collection);
           localCollectionHasChanges = true;
@@ -78,18 +81,20 @@ export default async function main() {
       console.log(
         `\nThe collection ${collection.collectionId} does not exist locally`,
       );
-      const { option } = await inquirer.prompt([
-        {
-          name: "option",
-          type: "list",
-          message: "What do you want to do?",
-          choices: [
-            "Nothing",
-            "Create new local collection",
-            "Delete remote prod collection",
-          ],
-        },
-      ]);
+      const { option } = args.l
+        ? { option: "Create new local collection" }
+        : await inquirer.prompt([
+          {
+            name: "option",
+            type: "list",
+            message: "What do you want to do?",
+            choices: [
+              "Nothing",
+              "Create new local collection",
+              ...(args.d ? ["Delete remote prod collection"] : []),
+            ],
+          },
+        ]);
       if (option === "Nothing") {
         collectionResources = [];
       }
@@ -99,14 +104,16 @@ export default async function main() {
           folder.split("/").slice(1).join("/")
         );
         folderOptions.push("<New Folder>");
-        let { folder } = await inquirer.prompt([
-          {
-            name: "folder",
-            type: "list",
-            message: "Choose a folder in " + topPath,
-            choices: folderOptions,
-          },
-        ]);
+        let { folder } = (args.l && args.f)
+          ? { folder: folderOptions[0] }
+          : await inquirer.prompt([
+            {
+              name: "folder",
+              type: "list",
+              message: "Choose a folder in " + topPath,
+              choices: folderOptions,
+            },
+          ]);
         if (folder === "<New Folder>") folder = await promtNewFolder();
         fullDir += `/${folder}/${collection.collectionId}`;
         ensureDirSync(fullDir);
@@ -147,18 +154,20 @@ export default async function main() {
           console.log(
             `\nThere is a difference in the collection ${flow.resourceCollectionId}\nwith the resource ${flow.resourceAccessorPath}`,
           );
-          const { option } = await inquirer.prompt([
-            {
-              name: "option",
-              type: "list",
-              message: "What do you want to do?",
-              choices: [
-                "Nothing",
-                "Overwrite local resource",
-                "Push local resource to remote prod",
-              ],
-            },
-          ]);
+          const { option } = args.l
+            ? { option: "Overwrite local resource" }
+            : await inquirer.prompt([
+              {
+                name: "option",
+                type: "list",
+                message: "What do you want to do?",
+                choices: [
+                  "Nothing",
+                  "Overwrite local resource",
+                  "Push local resource to remote prod",
+                ],
+              },
+            ]);
           if (option === "Nothing") {
             if (localConfig) {
               localConfig.resourceBytes = "";
@@ -167,9 +176,9 @@ export default async function main() {
             finalRemoteCollection.resources.push(flow);
           }
           if (option === "Overwrite local resource") {
-            Deno.writeTextFileSync(
+            Deno.writeFileSync(
               resourcePath,
-              utfDecoder.decode(base64.decode(flow.resourceBytes)),
+              base64.decode(flow.resourceBytes),
             );
             console.log(`Updated resource ${flow.resourceAccessorPath}`);
             const localVersion = _.cloneDeep(flow);
@@ -201,42 +210,55 @@ export default async function main() {
             console.log(
               `\nThe collection ${flow.resourceCollectionId} has the resource ${flow.resourceId}\nbut there is no local file saved to ${flow.resourceAccessorPath}`,
             );
-            const { askedOption } = await inquirer.prompt([
-              {
-                name: "askedOption",
-                type: "list",
-                message: "What do you want to do?",
-                choices: [
-                  "Remove local _collection.json resource",
+            const { askedOption } = args.l
+              ? {
+                askedOption:
                   `Save prods resource to ${flow.resourceAccessorPath}`,
-                  "Delete remote prod resource (will also remove local _collection.json resource)",
-                ],
-              },
-            ]);
+              }
+              : await inquirer.prompt([
+                {
+                  name: "askedOption",
+                  type: "list",
+                  message: "What do you want to do?",
+                  choices: [
+                    "Remove resource listed in the local _collection.json file",
+                    `Save prods resource to ${flow.resourceAccessorPath}`,
+                    ...(args.d
+                      ? [
+                        "Delete remote prod resource (will also remove local _collection.json resource)",
+                      ]
+                      : []),
+                  ],
+                },
+              ]);
             option = askedOption;
           } else {
             console.log(
               `\nThe collection ${flow.resourceCollectionId}\nhas a resource ${flow.resourceAccessorPath} that does not exist locally`,
             );
-            const { askedOption } = await inquirer.prompt([
-              {
-                name: "askedOption",
-                type: "list",
-                message: "What do you want to do?",
-                choices: [
-                  "Nothing",
-                  "Create new local resource",
-                  "Delete remote prod resource",
-                ],
-              },
-            ]);
+            const { askedOption } = args.l
+              ? { askedOption: "Create new local resource" }
+              : await inquirer.prompt([
+                {
+                  name: "askedOption",
+                  type: "list",
+                  message: "What do you want to do?",
+                  choices: [
+                    "Nothing",
+                    "Create new local resource",
+                    ...(args.d ? ["Delete remote prod resource"] : []),
+                  ],
+                },
+              ]);
             option = askedOption;
           }
         }
         if (option === "Nothing") {
           finalRemoteCollection.resources.push(flow);
         }
-        if (option === "Remove local _collection.json resource") {
+        if (
+          option === "Remove resource listed in the local _collection.json file"
+        ) {
           finalRemoteCollection.resources.push(flow);
           localCollectionHasChanges = true;
         }
@@ -247,9 +269,9 @@ export default async function main() {
           const resourcePath = fullDir + flow.resourceAccessorPath;
           const resourceDir = parse(resourcePath).dir;
           ensureDirSync(resourceDir);
-          Deno.writeTextFileSync(
+          Deno.writeFileSync(
             resourcePath,
-            utfDecoder.decode(base64.decode(flow.resourceBytes)),
+            base64.decode(flow.resourceBytes),
           );
           console.log(`Saved new resource ${flow.resourceAccessorPath}`);
           const localVersion = _.cloneDeep(flow);
@@ -285,18 +307,20 @@ export default async function main() {
           console.log(
             `\nThe remote prod collection ${collection.collectionId}\ndoesn't have the resource ${localFlow.resourceAccessorPath}`,
           );
-          const { option } = await inquirer.prompt([
-            {
-              name: "option",
-              type: "list",
-              message: "What do you want to do?",
-              choices: [
-                "Nothing",
-                "Push new resource to prod",
-                "Delete local resource",
-              ],
-            },
-          ]);
+          const { option } = args.l
+            ? { option: "Nothing" }
+            : await inquirer.prompt([
+              {
+                name: "option",
+                type: "list",
+                message: "What do you want to do?",
+                choices: [
+                  "Nothing",
+                  "Push new resource to prod",
+                  ...(args.d ? ["Delete local resource"] : []),
+                ],
+              },
+            ]);
           if (option === "Nothing") {
             finalLocalCollection!.resources.push(localFlow);
           }
@@ -326,18 +350,20 @@ export default async function main() {
           console.log(
             `\nThe remote prod collection ${collection.collectionId}\ndoesn't have the resource ${localFlow.resourceAccessorPath}`,
           );
-          const { option } = await inquirer.prompt([
-            {
-              name: "option",
-              type: "list",
-              message: "What do you want to do?",
-              choices: [
-                "Nothing",
-                "Push new resource to prod",
-                "Delete local resource",
-              ],
-            },
-          ]);
+          const { option } = args.l
+            ? { option: "Nothing" }
+            : await inquirer.prompt([
+              {
+                name: "option",
+                type: "list",
+                message: "What do you want to do?",
+                choices: [
+                  "Nothing",
+                  "Push new resource to prod",
+                  ...(args.d ? ["Delete local resource"] : []),
+                ],
+              },
+            ]);
           if (option === "Nothing") {
             finalLocalCollection!.resources.push(localFlow);
           }
@@ -352,10 +378,16 @@ export default async function main() {
         }
       }
     }
-    if (localCollectionHasChanges) {
-      await writeFile(finalLocalCollection!, `${fullDir}/_collection.json`);
+    if (
+      localCollectionHasChanges &&
+      !_.isEqual(localCollection, collection)
+    ) {
+      writeFile(finalLocalCollection!, `${fullDir}/_collection.json`);
     }
-    if (remoteCollectionHasChanges) {
+    if (
+      remoteCollectionHasChanges &&
+      !_.isEqual(finalRemoteCollection, collection)
+    ) {
       const resp = await pushConfig(
         "/repository/resourceCollections",
         finalRemoteCollection,
@@ -380,7 +412,7 @@ export default async function main() {
     console.log(
       `\nThe remote prod doesn't have the collection ${localCollection.collectionId}`,
     );
-    const { option } = await inquirer.prompt([
+    const { option } = args.l ? { option: "Nothing" } : await inquirer.prompt([
       {
         name: "option",
         type: "list",
@@ -388,13 +420,13 @@ export default async function main() {
         choices: [
           "Nothing",
           "Push new collection to prod",
-          "Delete local collection",
+          ...(args.d ? ["Delete local collection"] : []),
         ],
       },
     ]);
     if (option === "Push new collection to prod") {
       for (const localFlow of localCollection.resources) {
-        const resourcePath = await findFile(
+        const resourcePath = findFile(
           fullDir,
           localFlow.resourceAccessorPath,
         );

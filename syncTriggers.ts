@@ -1,11 +1,13 @@
+import { Args } from "https://deno.land/std@0.184.0/flags/mod.ts";
 import { triggerObj } from "./types.ts";
 import singleSync from "./singleSync.ts";
 
-export default async function main() {
-  await singleSync(
-    "triggers",
-    "/repository/flowTriggerers",
-    "trigger",
-    (obj: triggerObj) => obj.config.name,
-  );
+export default async function main(args: Args) {
+  await singleSync({
+    topPath: "triggers",
+    urlPath: "/repository/flowTriggerers",
+    resourceType: "trigger",
+    getName: (obj: triggerObj) => obj.config.name,
+    args,
+  });
 }

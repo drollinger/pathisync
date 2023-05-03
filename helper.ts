@@ -13,8 +13,7 @@ export const getFiles = (dir: string): string[] => {
 
 export const findFile = (dir: string, filename: string) => {
   const files = getFiles(dir);
-  const filteredList = files
-    .filter((file) => parse(file).name === filename);
+  const filteredList = files.filter((file) => file.endsWith(filename));
   if (filteredList.length > 1) {
     throw new Error(`Duplicate Filenames Found!\n${filteredList.join("\n")}`);
   }

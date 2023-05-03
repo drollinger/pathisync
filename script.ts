@@ -5,15 +5,13 @@ import syncTriggers from "./syncTriggers.ts";
 import syncResources from "./syncResources.ts";
 
 export default async (args: Args) => {
-  switch (args._[0]) {
-    case "all":
-      await syncFlows();
-      await syncSharedConfigs();
-      await syncTriggers();
-      await syncResources();
-      break;
-    default:
-      console.error("Invalid command.");
-      Deno.exit(1);
+  // Handle watch flag
+  if (args.watch) {
+    console.log("Watch flag not yet implemented");
+  } else {
+    await syncFlows(args);
+    await syncSharedConfigs(args);
+    await syncTriggers(args);
+    await syncResources(args);
   }
 };

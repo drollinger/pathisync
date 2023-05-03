@@ -11,7 +11,17 @@ export default function pathifyFetch(
     "flow-token": env["PATHIFY_TOKEN"],
     ...options?.headers,
   };
-  return fetch(env["FLOW_SERVER_URL"] + path, {
+  let flowUrl = env["FLOW_SERVER_URL"];
+  try {
+    new URL(flowUrl);
+    if (flowUrl.endsWith("/")) flowUrl = flowUrl.slice(0, -1);
+  } catch (_) {
+    console.log(
+      "Please edit the .env file to include a valid flow server url.",
+    );
+    Deno.exit(1);
+  }
+  return fetch(flowUrl + path, {
     ...options,
     headers,
   });
