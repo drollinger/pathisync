@@ -1,5 +1,5 @@
 import { walkSync } from "https://deno.land/std@0.184.0/fs/mod.ts";
-import { parse } from "https://deno.land/std@0.184.0/path/mod.ts";
+import { join, parse, SEP } from "https://deno.land/std@0.184.0/path/mod.ts";
 import inquirer from "npm:inquirer@^9.2.0";
 import fetch from "./client.ts";
 
@@ -82,16 +82,55 @@ export const getDirs = (
 };
 
 export async function pushConfig(url: string, data: any) {
-  console.log("bad");
   return await fetch(url, {
-    //method: "POST",
-    method: "GET",
+    method: "POST",
     body: JSON.stringify(data),
   });
 }
 
 export async function deleteRemoteConfig(url: string) {
-  //return await fetch(url, { method: "DELETE" });
-  console.log("bad");
-  return await fetch(url, { method: "GET" });
+  return await fetch(url, { method: "DELETE" });
 }
+
+export const debounceFileEvents = (
+  func: (modifiedFiles: string[]) => void,
+): (event: Deno.FsEvent) => void => {
+  let timeout: number | undefined;
+  const modifiedFiles = new Set<string>();
+
+  return (event: Deno.FsEvent) => {
+    event.paths.forEach((path) => modifiedFiles.add(path));
+
+    clearTimeout(timeout);
+    timeout = setTimeout(() => {
+      func(Array.from(modifiedFiles));
+      modifiedFiles.clear();
+    }, 500);
+  };
+};
+
+export const findCollectionPathId = (
+  filePath: string,
+): string => {
+  const msg =
+    "Ensure all resource files are in a collection folder with an associated _collection.json file.";
+  let currentDir = parse(filePath).dir;
+
+  while (
+    currentDir !== SEP && currentDir.split(SEP).pop() !== "resources"
+  ) {
+    const collectionPath = join(currentDir, "_collection.json");
+    try {
+      Deno.statSync(collectionPath);
+      return currentDir.split(SEP).pop()!;
+    } catch (error) {
+      if (error instanceof Deno.errors.NotFound) {
+        currentDir = parse(currentDir).dir;
+      } else {
+        throw error;
+      }
+    }
+  }
+  console.log(msg);
+  Deno.exit(1);
+};

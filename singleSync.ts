@@ -26,6 +26,7 @@ export default async function singleSync({
   getName,
   args,
   removeAttributes,
+  specificFileName,
 }: {
   topPath: string;
   urlPath: string;
@@ -33,6 +34,7 @@ export default async function singleSync({
   getName: (obj: any) => string;
   args: Args;
   removeAttributes?: (obj: any) => void;
+  specificFileName?: string;
 }) {
   const resp = await fetch(urlPath);
   let body: optionType[];
@@ -44,6 +46,10 @@ export default async function singleSync({
     );
     Deno.exit(1);
   }
+  // Only sync specified files if they are provided
+  if (specificFileName) {
+    body = body.filter((flow) => specificFileName === getName(flow));
+  }
   let files = getFiles(topPath).map((file) => join(Deno.cwd(), file));
 
   for (const flow of body) {
@@ -52,7 +58,7 @@ export default async function singleSync({
       const localFlow = JSON.parse(
         decoder.decode(Deno.readFileSync(file)),
       ) as optionType;
-      files = files.filter((f) => f !== file);
+      files = files.filter((f) => f.endsWith(file));
       delete flow.metadata;
       if (removeAttributes) removeAttributes(flow);
       if (!_.isEqual(flow, localFlow)) {
@@ -63,6 +69,8 @@ export default async function singleSync({
         );
         const { option } = args.l
           ? { option: `Overwrite local ${resourceType}` }
+          : args.watch
+          ? { option: `Push local ${resourceType} to remote prod` }
           : await inquirer.prompt([
             {
               name: "option",
@@ -133,38 +141,42 @@ export default async function singleSync({
       }
     }
   }
-  for (const file of files) {
-    const localFlow = JSON.parse(
-      decoder.decode(Deno.readFileSync(file)),
-    ) as optionType;
-    if (!args.l) {
-      console.log(
-        `\nThe remote prod doesn't have the ${resourceType} ${
-          getName(localFlow)
-        }\nlocated at ${file}`,
-      );
-    }
-    const { option } = args.l ? { option: "Nothing" } : await inquirer.prompt([
-      {
-        name: "option",
-        type: "list",
-        message: "What do you want to do?",
-        choices: [
-          "Nothing",
-          `Push new ${resourceType} to prod`,
-          ...(args.d ? [`Delete local ${resourceType}`] : []),
-        ],
-      },
-    ]);
-    if (option === `Push new ${resourceType} to prod`) {
-      const resp = await pushConfig(urlPath, localFlow);
-      if (resp.status === 200) {
-        console.log(`Successfully pushed ${getName(localFlow)}`);
-      } else console.log(`Failed pushing ${getName(localFlow)}`);
-    }
-    if (option === `Delete local ${resourceType}`) {
-      Deno.removeSync(file);
-      console.log(`Deleted ${file}`);
+  if (!args.watch) {
+    for (const file of files) {
+      const localFlow = JSON.parse(
+        decoder.decode(Deno.readFileSync(file)),
+      ) as optionType;
+      if (!args.l) {
+        console.log(
+          `\nThe remote prod doesn't have the ${resourceType} ${
+            getName(localFlow)
+          }\nlocated at ${file}`,
+        );
+      }
+      const { option } = args.l
+        ? { option: "Nothing" }
+        : await inquirer.prompt([
+          {
+            name: "option",
+            type: "list",
+            message: "What do you want to do?",
+            choices: [
+              "Nothing",
+              `Push new ${resourceType} to prod`,
+              ...(args.d ? [`Delete local ${resourceType}`] : []),
+            ],
+          },
+        ]);
+      if (option === `Push new ${resourceType} to prod`) {
+        const resp = await pushConfig(urlPath, localFlow);
+        if (resp.status === 200) {
+          console.log(`Successfully pushed ${getName(localFlow)}`);
+        } else console.log(`Failed pushing ${getName(localFlow)}`);
+      }
+      if (option === `Delete local ${resourceType}`) {
+        Deno.removeSync(file);
+        console.log(`Deleted ${file}`);
+      }
     }
   }
 }

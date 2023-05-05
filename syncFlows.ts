@@ -2,7 +2,7 @@ import { Args } from "https://deno.land/std@0.184.0/flags/mod.ts";
 import { flowObj } from "./types.ts";
 import singleSync from "./singleSync.ts";
 
-export default async function main(args: Args) {
+export default async function main(args: Args, specificFileName?: string) {
   await singleSync({
     topPath: "flows",
     urlPath: "/repository/flows",
@@ -17,5 +17,6 @@ export default async function main(args: Args) {
         }
       }
     },
+    specificFileName,
   });
 }
