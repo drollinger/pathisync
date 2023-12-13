@@ -1,5 +1,5 @@
-import { walkSync } from "https://deno.land/std@0.184.0/fs/mod.ts";
-import { join, parse, SEP } from "https://deno.land/std@0.184.0/path/mod.ts";
+import { walkSync } from "https://deno.land/std@0.208.0/fs/mod.ts";
+import { join, parse, SEP } from "https://deno.land/std@0.208.0/path/mod.ts";
 import inquirer from "npm:inquirer@^9.2.0";
 import fetch from "./client.ts";
 
