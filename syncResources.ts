@@ -1,9 +1,9 @@
 import fetch from "./client.ts";
 import inquirer from "npm:inquirer@^9.2.0";
-import * as base64 from "https://deno.land/std@0.184.0/encoding/base64.ts";
-import { ensureDirSync } from "https://deno.land/std@0.184.0/fs/mod.ts";
-import { parse, relative } from "https://deno.land/std@0.184.0/path/mod.ts";
-import { Args } from "https://deno.land/std@0.184.0/flags/mod.ts";
+import * as base64 from "https://deno.land/std@0.208.0/encoding/base64.ts";
+import { ensureDirSync } from "https://deno.land/std@0.208.0/fs/mod.ts";
+import { parse, relative } from "https://deno.land/std@0.208.0/path/mod.ts";
+import { Args } from "https://deno.land/std@0.208.0/flags/mod.ts";
 // @deno-types="npm:@types/lodash"
 import _ from "npm:lodash@^4.17.21";
 import {

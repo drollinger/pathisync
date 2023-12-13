@@ -1,9 +1,9 @@
-import { Args } from "https://deno.land/std@0.184.0/flags/mod.ts";
+import { Args } from "https://deno.land/std@0.208.0/flags/mod.ts";
 import {
   parse,
   relative,
   SEP,
-} from "https://deno.land/std@0.184.0/path/mod.ts";
+} from "https://deno.land/std@0.208.0/path/mod.ts";
 import syncFlows from "./syncFlows.ts";
 import syncSharedConfigs from "./syncSharedConfigs.ts";
 import syncTriggers from "./syncTriggers.ts";

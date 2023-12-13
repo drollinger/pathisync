@@ -1,4 +1,4 @@
-import { load } from "https://deno.land/std@0.184.0/dotenv/mod.ts";
+import { load } from "https://deno.land/std@0.208.0/dotenv/mod.ts";
 
 const env = await load();
 

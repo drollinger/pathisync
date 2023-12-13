@@ -1,6 +1,6 @@
-import { ensureDirSync } from "https://deno.land/std@0.184.0/fs/mod.ts";
-import { Args } from "https://deno.land/std@0.184.0/flags/mod.ts";
-import { join } from "https://deno.land/std@0.184.0/path/mod.ts";
+import { ensureDirSync } from "https://deno.land/std@0.208.0/fs/mod.ts";
+import { Args } from "https://deno.land/std@0.208.0/flags/mod.ts";
+import { join } from "https://deno.land/std@0.208.0/path/mod.ts";
 import fetch from "./client.ts";
 // @deno-types="npm:@types/inquirer"
 import inquirer from "npm:inquirer@^9.2.0";
