@@ -1,9 +1,9 @@
-import fetch from "./client.ts";
+import * as base64 from "https://deno.land/std@0.220.1/encoding/base64.ts";
+import { ensureDirSync } from "https://deno.land/std@0.220.1/fs/mod.ts";
+import { parse, relative } from "https://deno.land/std@0.220.1/path/mod.ts";
+import { Args } from "https://deno.land/std@0.220.1/cli/parse_args.ts";
+// @deno-types="npm:@types/inquirer"
 import inquirer from "npm:inquirer@^9.2.0";
-import * as base64 from "https://deno.land/std@0.208.0/encoding/base64.ts";
-import { ensureDirSync } from "https://deno.land/std@0.208.0/fs/mod.ts";
-import { parse, relative } from "https://deno.land/std@0.208.0/path/mod.ts";
-import { Args } from "https://deno.land/std@0.208.0/flags/mod.ts";
 // @deno-types="npm:@types/lodash"
 import _ from "npm:lodash@^4.17.21";
 import {
@@ -17,6 +17,7 @@ import {
   writeFile,
 } from "./helper.ts";
 import { resourceObj } from "./types.ts";
+import fetch from "./client.ts";
 
 const topPath = "resources";
 const utfDecoder = new TextDecoder("utf-8");
@@ -183,7 +184,7 @@ export default async function main(args: Args, specificFilePath?: string) {
       }
       if (localCollection && resourcePath && isWatchResource) {
         // Resource already exists
-        const localResource = base64.encode(
+        const localResource = base64.encodeBase64(
           Deno.readFileSync(resourcePath),
         );
         if (localConfig) localConfig.resourceBytes = localResource;
@@ -217,7 +218,7 @@ export default async function main(args: Args, specificFilePath?: string) {
           if (option === "Overwrite local resource") {
             Deno.writeFileSync(
               resourcePath,
-              base64.decode(flow.resourceBytes),
+              base64.decodeBase64(flow.resourceBytes),
             );
             console.log(`Updated resource ${flow.resourceAccessorPath}`);
             const localVersion = _.cloneDeep(flow);
@@ -311,7 +312,7 @@ export default async function main(args: Args, specificFilePath?: string) {
           ensureDirSync(resourceDir);
           Deno.writeFileSync(
             resourcePath,
-            base64.decode(flow.resourceBytes),
+            base64.decodeBase64(flow.resourceBytes),
           );
           console.log(`Saved new resource ${flow.resourceAccessorPath}`);
           const localVersion = _.cloneDeep(flow);
@@ -350,7 +351,7 @@ export default async function main(args: Args, specificFilePath?: string) {
         );
         if (resourcePath) {
           // Local resource has a path
-          const localResource = base64.encode(
+          const localResource = base64.encodeBase64(
             Deno.readFileSync(resourcePath),
           );
           console.log(
@@ -480,7 +481,7 @@ export default async function main(args: Args, specificFilePath?: string) {
             localFlow.resourceAccessorPath,
           );
           if (resourcePath) {
-            const localResource = base64.encode(
+            const localResource = base64.encodeBase64(
               Deno.readFileSync(resourcePath),
             );
             localFlow.resourceBytes = localResource;

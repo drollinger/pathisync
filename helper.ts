@@ -1,5 +1,5 @@
-import { walkSync } from "https://deno.land/std@0.208.0/fs/mod.ts";
-import { join, parse, SEP } from "https://deno.land/std@0.208.0/path/mod.ts";
+import { walkSync } from "https://deno.land/std@0.220.1/fs/mod.ts";
+import { join, parse } from "https://deno.land/std@0.220.1/path/mod.ts";
 import inquirer from "npm:inquirer@^9.2.0";
 import fetch from "./client.ts";
 
@@ -117,12 +117,12 @@ export const findCollectionPathId = (
   let currentDir = parse(filePath).dir;
 
   while (
-    currentDir !== SEP && currentDir.split(SEP).pop() !== "resources"
+    currentDir !== "/" && currentDir.split("/").pop() !== "resources"
   ) {
     const collectionPath = join(currentDir, "_collection.json");
     try {
       Deno.statSync(collectionPath);
-      return currentDir.split(SEP).pop()!;
+      return currentDir.split("/").pop()!;
     } catch (error) {
       if (error instanceof Deno.errors.NotFound) {
         currentDir = parse(currentDir).dir;

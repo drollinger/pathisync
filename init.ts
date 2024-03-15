@@ -1,10 +1,10 @@
-import { ensureDirSync } from "https://deno.land/std@0.208.0/fs/mod.ts";
-import { join } from "https://deno.land/std@0.208.0/path/mod.ts";
-import { parse } from "https://deno.land/std@0.208.0/flags/mod.ts";
+import { ensureDirSync } from "https://deno.land/std@0.220.1/fs/mod.ts";
+import { join } from "https://deno.land/std@0.220.1/path/mod.ts";
+import { parseArgs } from "https://deno.land/std@0.220.1/cli/parse_args.ts";
 import { env, gitignore, readme, script } from "./fileConstants.ts";
 
 // Get commandline arguments
-const args = parse(Deno.args);
+const args = parseArgs(Deno.args);
 const projectName = args._[0]?.toString();
 const projectPath = projectName ? join(Deno.cwd(), projectName) : Deno.cwd();
 ensureDirSync(projectPath);

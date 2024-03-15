@@ -1,9 +1,5 @@
-import { Args } from "https://deno.land/std@0.208.0/flags/mod.ts";
-import {
-  parse,
-  relative,
-  SEP,
-} from "https://deno.land/std@0.208.0/path/mod.ts";
+import { Args } from "https://deno.land/std@0.220.1/flags/mod.ts";
+import { parse, relative } from "https://deno.land/std@0.220.1/path/mod.ts";
 import syncFlows from "./syncFlows.ts";
 import syncSharedConfigs from "./syncSharedConfigs.ts";
 import syncTriggers from "./syncTriggers.ts";
@@ -16,11 +12,9 @@ export default async (args: Args) => {
     const watcher = Deno.watchFs(args.watch);
     try {
       const debounceSync = debounceFileEvents(async (modifiedFiles) => {
-        modifiedFiles.sort((a, _) =>
-          a.endsWith(SEP + "_collection.json") ? -1 : 1
-        );
+        modifiedFiles.sort((a, _) => a.endsWith("/_collection.json") ? -1 : 1);
         for (const filePath of modifiedFiles) {
-          switch (relative(Deno.cwd(), filePath).split(SEP)[0]) {
+          switch (relative(Deno.cwd(), filePath).split("/")[0]) {
             case "flows":
               await syncFlows(args, parse(filePath).name);
               break;

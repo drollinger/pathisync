@@ -1,4 +1,4 @@
-import { Args } from "https://deno.land/std@0.208.0/flags/mod.ts";
+import { Args } from "https://deno.land/std@0.220.1/cli/parse_args.ts";
 import { configObj } from "./types.ts";
 import singleSync from "./singleSync.ts";
 
