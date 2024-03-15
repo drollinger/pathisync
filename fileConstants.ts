@@ -63,6 +63,6 @@ export const script =
   `#!/usr/bin/env -S deno run --allow-env --allow-read --allow-write --allow-net
 
 import main from "https://deno.land/x/pathisync/script.ts";
-import { parse } from "https://deno.land/std@0.184.0/flags/mod.ts";
+import { parse } from "https://deno.land/std@0.220.1/flags/mod.ts";
 main(parse(Deno.args));
 `;

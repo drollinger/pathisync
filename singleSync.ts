@@ -1,4 +1,4 @@
-import { ensureDirSync } from "https://deno.land/std@0.208.0/fs/mod.ts";
+import { ensureDirSync } from "https://deno.land/std@0.220.1/fs/mod.ts";
 import { Args } from "https://deno.land/std@0.220.1/cli/parse_args.ts";
 import { join } from "https://deno.land/std@0.220.1/path/mod.ts";
 import fetch from "./client.ts";
