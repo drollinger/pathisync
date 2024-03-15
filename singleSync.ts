@@ -58,7 +58,7 @@ export default async function singleSync({
       const localFlow = JSON.parse(
         decoder.decode(Deno.readFileSync(file)),
       ) as optionType;
-      files = files.filter((f) => f.endsWith(file));
+      files = files.filter((f) => !f.endsWith(file));
       delete flow.metadata;
       if (removeAttributes) removeAttributes(flow);
       if (!_.isEqual(flow, localFlow)) {
