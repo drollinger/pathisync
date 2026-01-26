@@ -1,7 +1,7 @@
 import { ensureDirSync } from "@std/fs";
 import { join } from "@std/path";
 import { parseArgs } from "@std/cli";
-import { env, gitignore, readme, script } from "./fileConstants.ts";
+import { env, gitignore, readme } from "./fileConstants.ts";
 
 // Get commandline arguments
 const args = parseArgs(Deno.args);
@@ -30,10 +30,5 @@ Deno.writeTextFileSync(
   join(projectPath, ".gitignore"),
   gitignore,
 );
-Deno.writeTextFileSync(
-  join(projectPath, "sync"),
-  script,
-);
-Deno.chmodSync(join(projectPath, "sync"), 0o755);
 
 console.log("Pathisync configuration complete!");

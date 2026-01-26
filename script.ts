@@ -1,4 +1,4 @@
-import type { Args } from "@std/cli";
+import { parseArgs } from "@std/cli";
 import { parse, relative } from "@std/path";
 import syncFlows from "./syncFlows.ts";
 import syncSharedConfigs from "./syncSharedConfigs.ts";
@@ -6,44 +6,43 @@ import syncTriggers from "./syncTriggers.ts";
 import syncResources from "./syncResources.ts";
 import { debounceFileEvents } from "./helper.ts";
 
-export default async (args: Args): Promise<void> => {
-  if (args.watch) {
-    console.log(`Watching ${args.watch} for changes...`);
-    const watcher = Deno.watchFs(args.watch);
-    try {
-      const debounceSync = debounceFileEvents(async (modifiedFiles) => {
-        modifiedFiles.sort((a, _) => a.endsWith("/_collection.json") ? -1 : 1);
-        for (const filePath of modifiedFiles) {
-          switch (relative(Deno.cwd(), filePath).split("/")[0]) {
-            case "flows":
-              await syncFlows(args, parse(filePath).name);
-              break;
-            case "resources":
-              await syncResources(args, filePath);
-              break;
-            case "sharedConfigs":
-              await syncSharedConfigs(args, parse(filePath).name);
-              break;
-            case "triggers":
-              await syncTriggers(args, parse(filePath).name);
-              break;
-            default:
-              console.log(
-                `Ignoring ${filePath} because it is not in a recognized resource collection`,
-              );
-          }
+const args = parseArgs(Deno.args);
+if (args.watch) {
+  console.log(`Watching ${args.watch} for changes...`);
+  const watcher = Deno.watchFs(args.watch);
+  try {
+    const debounceSync = debounceFileEvents(async (modifiedFiles) => {
+      modifiedFiles.sort((a, _) => a.endsWith("/_collection.json") ? -1 : 1);
+      for (const filePath of modifiedFiles) {
+        switch (relative(Deno.cwd(), filePath).split("/")[0]) {
+          case "flows":
+            await syncFlows(args, parse(filePath).name);
+            break;
+          case "resources":
+            await syncResources(args, filePath);
+            break;
+          case "sharedConfigs":
+            await syncSharedConfigs(args, parse(filePath).name);
+            break;
+          case "triggers":
+            await syncTriggers(args, parse(filePath).name);
+            break;
+          default:
+            console.log(
+              `Ignoring ${filePath} because it is not in a recognized resource collection`,
+            );
         }
-      });
-      for await (const event of watcher) {
-        if (event.kind === "modify") debounceSync(event);
       }
-    } finally {
-      watcher.close();
+    });
+    for await (const event of watcher) {
+      if (event.kind === "modify") debounceSync(event);
     }
-  } else {
-    await syncFlows(args);
-    await syncSharedConfigs(args);
-    await syncTriggers(args);
-    await syncResources(args);
+  } finally {
+    watcher.close();
   }
-};
+} else {
+  await syncFlows(args);
+  await syncSharedConfigs(args);
+  await syncTriggers(args);
+  await syncResources(args);
+}

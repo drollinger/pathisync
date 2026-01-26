@@ -15,11 +15,10 @@ Description: Library of all config files for Pathify flow server.
 
 ## Running the sync
 
-1. To sync flows, resources, shared configs, and triggers, use the command \`./sync\`
-    Note: The sync script has the permissions \`--allow-env\`, \`--allow-read\`, \`--allow-write\`, \`--allow-net\`. You can edit this file and remove these permissions and approve them at runtime if you want
+1. To sync flows, resources, shared configs, and triggers, use the command \`deno run -A jsr:@usu/pathisync/script\`
 2. If there is anything out of sync with the server, a prompt will appear explaining differences and possible solutions
 3. By default, the sync will block the option to overwrite remote files and delete local files. To include deletion options, use the \`-d\` flag
-4. You can specify a specific config that you are working on to have the sync script watch the file and push any changes. To do this, use the command \`./sync --watch=path/to/_collection.json\`
+4. You can specify a specific config that you are working on to have the sync script watch the file and push any changes. To do this, use the command \`deno run -A jsr:@usu/pathisync/script -- --watch=path/to/_collection.json\`
 5. If you want the sync to default to updating local files you can use the \`-l\` flag.
 6. To force syncing and creating local files in the default directory you can use the \`-lf\` flag.
 
@@ -57,12 +56,4 @@ export const env = `# Add your environment variables here
 # By default, these tokens have a 30-day expiry
 PATHIFY_TOKEN=
 FLOW_SERVER_URL=https://<your.flow.server>
-`;
-
-export const script =
-  `#!/usr/bin/env -S deno run --allow-env --allow-read --allow-write --allow-net
-
-import main from "jsr:@usu/pathisync/script";
-import { parseArgs } from "jsr:@std/cli/parse-args@^0.220.1";
-main(parseArgs(Deno.args));
 `;

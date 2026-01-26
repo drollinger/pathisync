@@ -1,6 +1,6 @@
 {
   "name": "@usu/pathisync",
-  "version": "1.0.10",
+  "version": "1.1.0",
   "license": "MIT",
   "exports": {
     "./script": "./script.ts",
