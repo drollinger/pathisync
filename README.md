@@ -8,7 +8,7 @@ server
 - Ensure you have Deno installed on your machine
 - Run the command
   ```
-  deno run jsr:@usu/pathisync/init.ts new_folder_name
+  deno run jsr:@usu/pathisync/init new_folder_name
   ```
 - If you leave off the new_folder_name, the init script will set up everything
   in your current folder
