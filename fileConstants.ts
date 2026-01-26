@@ -26,7 +26,7 @@ Description: Library of all config files for Pathify flow server.
 
 ## Notes about syncing
 
-- The sync command uses a remote script that deno caches. To update this script to the latest version you can use the command \`deno cache --reload https://deno.land/x/pathisync/script.ts\`
+- The sync command uses a remote script that deno caches. To update this script to the latest version you can use the command \`deno cache --reload jsr:@usu/pathisync/script.ts\`
 - Config files are located in the Pathify folder under their respective folder names.
 - Flows, shared configs, and triggers only consist of a single widget file. These files must have the same name as the ID/name specified in the file and have a .json extension.
 - Resources consist of a folder with the same name as the collection id and inside of that folder, a \`\\_collection.json\` widget file
@@ -62,7 +62,7 @@ FLOW_SERVER_URL=https://<your.flow.server>
 export const script =
   `#!/usr/bin/env -S deno run --allow-env --allow-read --allow-write --allow-net
 
-import main from "https://deno.land/x/pathisync/script.ts";
-import { parse } from "https://deno.land/std@0.220.1/flags/mod.ts";
-main(parse(Deno.args));
+import main from "jsr:@usu/pathisync/script.ts";
+import { parseArgs } from "jsr:@std/cli/parse-args@^0.220.1";
+main(parseArgs(Deno.args));
 `;
