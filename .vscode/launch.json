@@ -1,0 +1,13 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Attach to Deno",
+      "type": "node",
+      "request": "attach",
+      "port": 9229,
+      "restart": false,
+      "skipFiles": ["<node_internals>/**"]
+    }
+  ]
+}

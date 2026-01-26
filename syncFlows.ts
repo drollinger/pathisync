@@ -15,8 +15,13 @@ export default async function main(args: Args, specificFileName?: string) {
         if (value?.config?.userFetchProviderWhenUsingClaims?.id) {
           delete obj.processors[key].config.userFetchProviderWhenUsingClaims.id;
         }
-        if (value?.config?.testConfig?.id) {
-          delete obj.processors[key].config.testConfig.id;
+        const tc = obj.processors[key]?.config?.testConfig;
+        if (Array.isArray(tc)) {
+          for (const item of tc) {
+            if (item?.id) {
+              delete item.id;
+            }
+          }
         }
       }
     },
