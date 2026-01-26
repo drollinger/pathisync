@@ -1,5 +1,5 @@
-import { Args } from "https://deno.land/std@0.220.1/cli/parse_args.ts";
-import { triggerObj } from "./types.ts";
+import type { Args } from "@std/cli";
+import type { triggerObj } from "./types.ts";
 import singleSync from "./singleSync.ts";
 
 export default async function main(args: Args, specificFileName?: string) {
@@ -7,7 +7,12 @@ export default async function main(args: Args, specificFileName?: string) {
     topPath: "triggers",
     urlPath: "/repository/flowTriggerers",
     resourceType: "trigger",
-    getName: (obj: triggerObj) => obj.config.name,
+    getName: (obj: triggerObj) => {
+      if (!("config" in obj)) {
+        return (obj as any).invalidConfig.name;
+      }
+      return obj.config.name;
+    },
     args,
     specificFileName,
   });

@@ -1,6 +1,6 @@
-import { walkSync } from "https://deno.land/std@0.220.1/fs/mod.ts";
-import { join, parse } from "https://deno.land/std@0.220.1/path/mod.ts";
-import inquirer from "npm:inquirer@^9.2.0";
+import { walkSync } from "@std/fs";
+import { join, parse } from "@std/path";
+import inquirer from "inquirer";
 import fetch from "./client.ts";
 
 export const getFiles = (dir: string): string[] => {

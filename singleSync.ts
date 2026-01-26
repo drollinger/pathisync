@@ -1,11 +1,9 @@
-import { ensureDirSync } from "https://deno.land/std@0.220.1/fs/mod.ts";
-import { Args } from "https://deno.land/std@0.220.1/cli/parse_args.ts";
-import { join } from "https://deno.land/std@0.220.1/path/mod.ts";
+import { ensureDirSync } from "@std/fs";
+import type { Args } from "@std/cli";
+import { join } from "@std/path";
 import fetch from "./client.ts";
-// @deno-types="npm:@types/inquirer"
-import inquirer from "npm:inquirer@^9.2.16";
-// @deno-types="npm:@types/lodash"
-import _ from "npm:lodash@^4.17.21";
+import inquirer from "inquirer";
+import _ from "lodash";
 import {
   deleteRemoteConfig,
   findFile,
@@ -15,7 +13,7 @@ import {
   pushConfig,
   writeFile,
 } from "./helper.ts";
-import { optionType } from "./types.ts";
+import type { optionType } from "./types.ts";
 
 const decoder = new TextDecoder("utf-8");
 

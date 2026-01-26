@@ -1,11 +1,9 @@
-import * as base64 from "https://deno.land/std@0.220.1/encoding/base64.ts";
-import { ensureDirSync } from "https://deno.land/std@0.220.1/fs/mod.ts";
-import { parse, relative } from "https://deno.land/std@0.220.1/path/mod.ts";
-import { Args } from "https://deno.land/std@0.220.1/cli/parse_args.ts";
-// @deno-types="npm:@types/inquirer"
-import inquirer from "npm:inquirer@^9.2.0";
-// @deno-types="npm:@types/lodash"
-import _ from "npm:lodash@^4.17.21";
+import * as base64 from "@std/encoding/base64";
+import { ensureDirSync } from "@std/fs";
+import { parse, relative } from "@std/path";
+import type { Args } from "@std/cli";
+import inquirer from "inquirer";
+import _ from "lodash";
 import {
   deleteRemoteConfig,
   findCollectionPathId,
@@ -16,7 +14,7 @@ import {
   pushConfig,
   writeFile,
 } from "./helper.ts";
-import { resourceObj } from "./types.ts";
+import type { resourceObj } from "./types.ts";
 import fetch from "./client.ts";
 
 const topPath = "resources";
@@ -69,7 +67,7 @@ export default async function main(args: Args, specificFilePath?: string) {
       // Get any resources that have changed meta data if watching specific file
       if (specificFilePath?.endsWith(collectionPath)) {
         localCollection.resources.forEach((localResource) => {
-          const remoteResource = collectionResources.find((resource) =>
+          const remoteResource = collectionResources.find((resource: any) =>
             resource.resourceId === localResource.resourceId
           );
           if (remoteResource && !_.isEqual(localResource, remoteResource)) {

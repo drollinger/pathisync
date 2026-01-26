@@ -1,5 +1,5 @@
-import { Args } from "https://deno.land/std@0.220.1/cli/parse_args.ts";
-import { flowObj } from "./types.ts";
+import type { Args } from "@std/cli";
+import type { flowObj } from "./types.ts";
 import singleSync from "./singleSync.ts";
 
 export default async function main(args: Args, specificFileName?: string) {
@@ -14,6 +14,9 @@ export default async function main(args: Args, specificFileName?: string) {
       for (const [key, value] of Object.entries(obj.processors)) {
         if (value?.config?.userFetchProviderWhenUsingClaims?.id) {
           delete obj.processors[key].config.userFetchProviderWhenUsingClaims.id;
+        }
+        if (value?.config?.testConfig?.id) {
+          delete obj.processors[key].config.testConfig.id;
         }
       }
     },

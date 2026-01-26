@@ -1,6 +1,6 @@
-import { ensureDirSync } from "https://deno.land/std@0.220.1/fs/mod.ts";
-import { join } from "https://deno.land/std@0.220.1/path/mod.ts";
-import { parseArgs } from "https://deno.land/std@0.220.1/cli/parse_args.ts";
+import { ensureDirSync } from "@std/fs";
+import { join } from "@std/path";
+import { parseArgs } from "@std/cli";
 import { env, gitignore, readme, script } from "./fileConstants.ts";
 
 // Get commandline arguments
