@@ -6,7 +6,7 @@ import syncTriggers from "./syncTriggers.ts";
 import syncResources from "./syncResources.ts";
 import { debounceFileEvents } from "./helper.ts";
 
-export default async (args: Args) => {
+export default async (args: Args): Promise<void> => {
   if (args.watch) {
     console.log(`Watching ${args.watch} for changes...`);
     const watcher = Deno.watchFs(args.watch);
