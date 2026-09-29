@@ -33,10 +33,13 @@ function project() {
       ...flow("balances@campus"),
       processors: { a: runs("fetch@campus"), b: runs("missing@campus") },
     },
-    "flows/@campus/balances/http_balances.trigger.json": trigger("http_balances", {
-      path: "/api/balances",
-      orchestratorName: "balances@campus",
-    }),
+    "flows/@campus/balances/http_balances.trigger.json": trigger(
+      "http_balances",
+      {
+        path: "/api/balances",
+        orchestratorName: "balances@campus",
+      },
+    ),
     "flows/@campus/fetch/flow.json": {
       ...flow("fetch@campus"),
       processors: { c: runs("balances@campus") },

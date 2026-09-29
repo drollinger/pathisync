@@ -18,6 +18,7 @@ import {
   type ConfigIndex,
   defaultWalker,
   indexConfigs,
+  sortedEntries,
   walkConfigDir,
   type Walker,
 } from "./fsIndex.ts";
@@ -164,8 +165,8 @@ export function indexFlows(
   }
   const files = new Map<string, string>();
   const duplicates = new Map<string, string[]>();
-  for (const [name, paths] of found) {
-    if (paths.length > 1) duplicates.set(name, paths);
+  for (const [name, paths] of sortedEntries(found)) {
+    if (paths.length > 1) duplicates.set(name, paths.sort());
     else if (!problems.some((p) => p.path === paths[0])) {
       files.set(name, paths[0]);
     }
@@ -194,7 +195,7 @@ export function indexTriggers(
   }
   const files = new Map<string, string>();
   const duplicates = new Map<string, string[]>();
-  for (const [name, paths] of found) {
+  for (const [name, paths] of sortedEntries(found)) {
     if (paths.length > 1) duplicates.set(name, paths.sort());
     else files.set(name, paths[0]);
   }

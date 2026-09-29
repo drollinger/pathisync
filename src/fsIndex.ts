@@ -118,15 +118,20 @@ function finish(
   found: Map<string, string[]>,
   folders: string[],
 ): ConfigIndex {
+  // Sorted, so the index doesn't depend on the order the OS lists files in.
   const files = new Map<string, string>();
   const duplicates = new Map<string, string[]>();
-  for (const [name, paths] of found) {
-    if (paths.length > 1) duplicates.set(name, paths);
+  for (const [name, paths] of sortedEntries(found)) {
+    if (paths.length > 1) duplicates.set(name, paths.sort());
     else files.set(name, paths[0]);
   }
   const sorted = [...new Set(folders)].filter((f) => f !== ".").sort();
   return { dir, files, folders: [".", ...sorted], duplicates };
 }
+
+/** Map entries sorted by key, independent of the order they were found in. */
+export const sortedEntries = <T>(map: Map<string, T>): [string, T][] =>
+  [...map].sort(([a], [b]) => a < b ? -1 : a > b ? 1 : 0);
 
 /** Throws one error listing every duplicate across the given indexes. */
 export function assertNoDuplicates(indexes: ConfigIndex[]) {

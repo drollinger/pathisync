@@ -55,7 +55,7 @@ export function startWatch(
     Deno.watchFs(r.path, { recursive: r.recursive })
   );
   const pending = new Set<string>();
-  let timer: number | undefined;
+  let timer: ReturnType<typeof setTimeout> | undefined;
   // Syncs run one at a time, in the order saves happened.
   let queue = Promise.resolve();
   let fatal: ((error: unknown) => void) | undefined;

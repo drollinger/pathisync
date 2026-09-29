@@ -90,8 +90,9 @@ Deno.test("-l runs print one-line summaries, not diffs", async () => {
 });
 
 Deno.test("color is used only when enabled (NO_COLOR, not a TTY)", () => {
+  // With NO_COLOR set, @std/fmt keeps color off whatever is asked.
   setColorEnabled(true);
-  assertStringIncludes(colorize("+a"), "\x1b[32m");
+  if (!Deno.noColor) assertStringIncludes(colorize("+a"), "\x1b[32m");
   setColorEnabled(false);
   assertEquals(colorize("+a\n-b\n@@ x"), "+a\n-b\n@@ x");
 });
