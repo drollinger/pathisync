@@ -6,30 +6,50 @@ import {
 } from "@std/assert";
 import { join } from "@std/path";
 import { main } from "../main.ts";
+import { SyncState } from "../src/state.ts";
 import { TYPES_FILE } from "../src/typegen/types.ts";
 import {
+  type Answer,
   CaptureOutput,
   collection,
   FakeServer,
   fileExists,
+  flow,
   localCollection,
   makeProject,
   readText,
   ScriptedPrompter,
   SERVER_URL,
   sharedConfig,
+  trigger,
 } from "./helpers.ts";
 
-async function run(root: string, argv: string[], server = new FakeServer()) {
+async function run(
+  root: string,
+  argv: string[],
+  server = new FakeServer(),
+  answers: Answer[] = [],
+) {
   const out = new CaptureOutput();
-  const code = await main(argv, {
-    root,
-    fetch: server.fetch,
-    out,
-    prompter: new ScriptedPrompter(),
-  });
-  return { code, out, server };
+  const prompter = new ScriptedPrompter(answers);
+  const code = await main(argv, { root, fetch: server.fetch, out, prompter });
+  assertEquals(prompter.answers, [], "every scripted answer is used");
+  return { code, out, server, prompter };
 }
+
+const TESTING_URL = "https://testing.test";
+
+/** Serves SERVER_URL from `prod` and TESTING_URL from `testing`. */
+function twoServers(prod: FakeServer, testing: FakeServer): FakeServer {
+  const router = new FakeServer();
+  router.fetch = (input, init) =>
+    (input.startsWith(TESTING_URL) ? testing : prod).fetch(input, init);
+  return router;
+}
+
+const git = (root: string, ...args: string[]) =>
+  new Deno.Command("git", { args, cwd: root, stdout: "null", stderr: "null" })
+    .outputSync();
 
 Deno.test("in a folder without .env, the first run sets up the project and stops", async () => {
   const root = Deno.makeTempDirSync();
@@ -137,6 +157,11 @@ Deno.test("bad commands and missing arguments are errors", async () => {
       [["watch"], "watch needs a path"],
       [["links"], "links needs a widget"],
       [["--watch=flows"], "Unknown option --watch=flows"],
+      [["flows"], "Unknown command flows"],
+      [["types", "flows"], "Unknown command flows"],
+      [["sync", "nope"], "nope is not inside"],
+      [["--env-file"], "--env-file needs a file"],
+      [["--env-file=.missing.env"], ".missing.env does not exist"],
     ] as const
   ) {
     const { code, out, server } = await run(root, [...argv]);
@@ -147,12 +172,115 @@ Deno.test("bad commands and missing arguments are errors", async () => {
   const help = await run(root, ["--help"]);
   for (
     const command of [
+      "sync [paths]",
       "check [paths]",
       "watch <paths>",
       "links <widgets>",
       "types",
+      "--env-file <file>",
     ]
   ) {
     assertStringIncludes(help.out.text(), command);
   }
+});
+
+Deno.test("sync <flow folder> --env-file pushes just that flow and its triggers to that server", async () => {
+  const prod = new FakeServer()
+    .put("flows", flow("f@w"), flow("g@w"))
+    .put("sharedConfig", sharedConfig("s"))
+    .put("flowTriggerers", trigger("tf", { orchestratorName: "f@w" }));
+  const testing = new FakeServer();
+  const server = twoServers(prod, testing);
+  const root = makeProject({
+    ".testing.env":
+      `PATHIFY_TOKEN=test-token\nFLOW_SERVER_URL=${TESTING_URL}\n`,
+  });
+  assertEquals((await run(root, ["-lf"], server)).code, 0);
+  assert(fileExists(root, "flows/@w/f/tf.trigger.json"));
+  prod.calls = [];
+
+  // Only f@w and tf are offered; a prompt for g@w or s would fail the run.
+  const { code, out, prompter } = await run(
+    root,
+    ["sync", "flows/@w/f", "--env-file=.testing.env"],
+    server,
+    ["push", "push"],
+  );
+  assertEquals(code, 0);
+  assertEquals(out.lines[0], `Using .testing.env (${TESTING_URL})`);
+  assertStringIncludes(out.text(), "testing.test doesn't have the flow f@w");
+  assert(
+    prompter.prompts[0].choices!.includes("Push new flow to testing.test"),
+  );
+  assertEquals([...testing.data.get("flows")!.keys()], ["f@w"]);
+  assertEquals([...testing.data.get("flowTriggerers")!.keys()], ["tf"]);
+  assertEquals(testing.data.get("sharedConfig")!.size, 0);
+  assertEquals(prod.calls, []);
+
+  // Each server keeps its own record.
+  const prodState = SyncState.load(root, SERVER_URL);
+  assert(prodState.get("flow:g@w") && prodState.get("sharedConfig:s"));
+  const testingState = SyncState.load(root, TESTING_URL);
+  assert(testingState.get("flow:f@w") && testingState.get("trigger:tf"));
+  assertEquals(testingState.get("flow:g@w"), undefined);
+
+  // A default sync still talks to prod, which is unchanged.
+  const again = await run(root, [], server);
+  assertEquals(again.code, 0);
+  assertEquals(again.prompter.prompts, []);
+  assertEquals(prod.writes(), []);
+});
+
+Deno.test("--env-file doesn't need a .env, and never sets up a project", async () => {
+  const root = Deno.makeTempDirSync();
+  Deno.writeTextFileSync(
+    join(root, ".testing.env"),
+    `PATHIFY_TOKEN=test-token\nFLOW_SERVER_URL=${TESTING_URL}\n`,
+  );
+  const { code } = await run(root, ["check", "--env-file", ".testing.env"]);
+  assertEquals(code, 0);
+  assertFalse(fileExists(root, ".env"));
+
+  const empty = Deno.makeTempDirSync();
+  const missing = await run(empty, ["--env-file=.testing.env"]);
+  assertEquals(missing.code, 1);
+  assertStringIncludes(missing.out.text(), ".testing.env does not exist");
+  assertFalse(fileExists(empty, ".env"));
+});
+
+Deno.test("a FLOW_SERVER_URL in the environment that the env file overrides is warned about", async () => {
+  // What `deno run --env-file=.testing.env jsr:@usu/pathisync` does.
+  Deno.env.set("FLOW_SERVER_URL", TESTING_URL);
+  try {
+    const { out } = await run(makeProject(), ["check"]);
+    assertStringIncludes(
+      out.text(),
+      `FLOW_SERVER_URL is ${TESTING_URL} in the environment, but .env says ${SERVER_URL}; using .env`,
+    );
+    Deno.env.set("FLOW_SERVER_URL", SERVER_URL + "/");
+    const same = await run(makeProject(), ["check"]);
+    assertFalse(same.out.text().includes("in the environment"));
+  } finally {
+    Deno.env.delete("FLOW_SERVER_URL");
+  }
+});
+
+Deno.test("an env file git doesn't ignore is warned about", async () => {
+  const root = makeProject({
+    ".testing.env":
+      `PATHIFY_TOKEN=test-token\nFLOW_SERVER_URL=${TESTING_URL}\n`,
+    ".gitignore": ".env\n",
+  });
+  git(root, "init", "-q");
+  const exposed = await run(root, ["check", "--env-file=.testing.env"]);
+  assertStringIncludes(
+    exposed.out.text(),
+    ".testing.env isn't ignored by git",
+  );
+  const quiet = await run(root, ["check"]);
+  assertFalse(quiet.out.text().includes("ignored by git"));
+
+  Deno.writeTextFileSync(join(root, ".gitignore"), ".env\n*.env\n");
+  const ignored = await run(root, ["check", "--env-file=.testing.env"]);
+  assertFalse(ignored.out.text().includes("ignored by git"));
 });

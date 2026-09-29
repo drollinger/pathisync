@@ -39,7 +39,7 @@ Deno.test("init in an existing project changes nothing that exists", () => {
   // Missing lines are added, existing ones kept.
   assertEquals(
     readText(root, ".gitignore"),
-    "node_modules\n.env\n.DS_Store\n.pathisync/\n",
+    "node_modules\n.env\n.DS_Store\n*.env\n.pathisync/\n",
   );
   assertStringIncludes(lines.join("\n"), "skipped .env (exists)");
   assertStringIncludes(lines.join("\n"), "skipped README.md (exists)");

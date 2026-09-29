@@ -3,7 +3,8 @@ import type { Action, Decision, Plan, SyncContext } from "./types.ts";
 
 const NOTHING: Decision = { action: "nothing" };
 
-export function describe(plan: Plan): string {
+/** The first line of the prompt for a plan; `server` is the flow server's host. */
+export function describe(plan: Plan, server: string): string {
   const what = `${plan.typeLabel} ${plan.id}`;
   const where = plan.displayPath ? `\nlocated at ${plan.displayPath}` : "";
   switch (plan.status) {
@@ -18,7 +19,7 @@ export function describe(plan: Plan): string {
     case "conflict":
       return `The ${what} changed both locally and on the server since the last sync${where}`;
     case "new-local":
-      return `The remote prod doesn't have the ${what}${where}`;
+      return `${server} doesn't have the ${what}${where}`;
     case "deleted-on-server":
       return `The ${what} was deleted on the server since the last sync${where}`;
     case "deleted-on-server-edited":
@@ -32,7 +33,11 @@ export function describe(plan: Plan): string {
   }
 }
 
-export function actionLabel(plan: Plan, action: Action): string {
+export function actionLabel(
+  plan: Plan,
+  action: Action,
+  server: string,
+): string {
   const custom = plan.labels?.[action];
   if (custom) return custom;
   const t = plan.typeLabel;
@@ -43,14 +48,14 @@ export function actionLabel(plan: Plan, action: Action): string {
       return `Overwrite local ${t}`;
     case "push":
       return plan.remoteHash
-        ? `Push local ${t} to remote prod`
-        : `Push new ${t} to prod`;
+        ? `Push local ${t} to ${server}`
+        : `Push new ${t} to ${server}`;
     case "create-local":
       return `Create new local ${t}`;
     case "delete-local":
       return `Delete local ${t}`;
     case "delete-remote":
-      return `Delete remote prod ${t}`;
+      return `Delete ${t} on ${server}`;
   }
 }
 
@@ -105,7 +110,7 @@ export async function decide(
     }
   }
 
-  out.log("\n" + describe(plan));
+  out.log("\n" + describe(plan, ctx.server));
   for (const note of plan.notes) out.warn(`  ${note}`);
   if (plan.guard) out.log(`(${plan.guard.reason})`);
   const diff = options.showDiff
@@ -122,7 +127,7 @@ export async function decide(
       "What do you want to do?",
       [
         ...plan.options.map((value) => ({
-          name: actionLabel(plan, value),
+          name: actionLabel(plan, value, ctx.server),
           value,
         })),
         ...(diff
@@ -190,7 +195,9 @@ async function decideWatch(
       return NOTHING;
     default:
       out.log(
-        `· ${label}: ${describe(plan).split("\n")[0]}; run a normal sync`,
+        `· ${label}: ${
+          describe(plan, ctx.server).split("\n")[0]
+        }; run a normal sync`,
       );
       return NOTHING;
   }

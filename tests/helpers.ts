@@ -219,6 +219,7 @@ export function makeContext(
 ): SyncContext & { prompter: ScriptedPrompter; out: CaptureOutput } {
   return {
     root,
+    server: new URL(SERVER_URL).host,
     client: createClient({
       serverUrl: SERVER_URL,
       token: "test-token",

@@ -73,7 +73,7 @@ Deno.test("unknown (no baseline): prompts with a diff, as before", async () => {
   assertEquals(ctx.prompter.prompts[0].choices, [
     "Nothing",
     "Overwrite local shared config",
-    "Push local shared config to remote prod",
+    "Push local shared config to flow.test",
     "Show full diff",
   ]);
   const text = ctx.out.text();
@@ -141,7 +141,7 @@ Deno.test("local changed: interactive offers push; watch pushes", async () => {
     const ctx = await sync(root, server, {}, ["push"]);
     assertEquals(ctx.prompter.prompts[0].choices, [
       "Nothing",
-      "Push local shared config to remote prod",
+      "Push local shared config to flow.test",
       "Show full diff",
     ]);
     assertEquals(server.get("sharedConfig", "a")!.config, { value: 3 });
@@ -206,7 +206,7 @@ Deno.test("new local: offers push (and delete with -d); watch does nothing", asy
   let ctx = await sync(root, server, { allowDelete: true }, ["push"]);
   assertEquals(ctx.prompter.prompts[0].choices, [
     "Nothing",
-    "Push new shared config to prod",
+    "Push new shared config to flow.test",
     "Delete local shared config",
     "Show full diff",
   ]);
@@ -342,6 +342,31 @@ Deno.test("changing FLOW_SERVER_URL invalidates the record", async () => {
   assert(SyncState.load(root, SERVER_URL).get("sharedConfig:a"));
   assertEquals(
     SyncState.load(root, "https://other.test").get("sharedConfig:a"),
+    undefined,
+  );
+});
+
+Deno.test("each server keeps its own record, and a version 1 record is kept", () => {
+  const root = makeProject({
+    ".pathisync/state.json": {
+      version: 1,
+      server: SERVER_URL,
+      entries: { "sharedConfig:a": "old" },
+    },
+  });
+  assertEquals(SyncState.load(root, SERVER_URL).get("sharedConfig:a"), "old");
+  const other = SyncState.load(root, "https://other.test");
+  other.set("sharedConfig:b", "new");
+  other.save();
+  assertEquals(readJson(root, ".pathisync/state.json"), {
+    version: 2,
+    servers: {
+      [SERVER_URL]: { "sharedConfig:a": "old" },
+      "https://other.test": { "sharedConfig:b": "new" },
+    },
+  });
+  assertEquals(
+    SyncState.load(root, SERVER_URL).get("sharedConfig:b"),
     undefined,
   );
 });

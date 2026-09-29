@@ -4,10 +4,10 @@
 
 import { parseArgs } from "@std/cli/parse-args";
 import { setColorEnabled } from "@std/fmt/colors";
-import { join } from "@std/path";
+import { join, resolve } from "@std/path";
 import { EXIT_ERROR, printCheck } from "./src/check.ts";
 import { createClient, type FetchFn } from "./src/client.ts";
-import { loadEnv } from "./src/env.ts";
+import { DEFAULT_ENV_FILE, isExposedToGit, loadEnv } from "./src/env.ts";
 import { ConfigError, errorMessage, PathisyncError } from "./src/errors.ts";
 import { formatLinks, widgetLinks } from "./src/links.ts";
 import { exists } from "./src/localFiles.ts";
@@ -33,6 +33,7 @@ Commands:
   (none)              Sync flows, shared configs, triggers and resources, and
                       update the editor types. In a folder without a .env, set
                       up a new project instead
+  sync [paths]        Sync only a flow folder, config, file or folder
   check [paths]       Only report what differs; never prompt, write or push.
                       Exits 0 when in sync, 1 when something differs, 2 on errors
   watch <paths>       Push saved changes for a flow folder, config, file or folder
@@ -46,6 +47,9 @@ Options:
   --diff              With check, include diffs
   --no-diff           Don't print diffs before prompts
   --allow-bundled     Offer to push or delete bundled configs (asks per config)
+  --env-file <file>   Read the token and server from <file> instead of .env,
+                      for example --env-file=.testing.env. Put it after
+                      jsr:@usu/pathisync, or Deno reads it instead
   -h, --help          Show this help
 `;
 
@@ -72,6 +76,7 @@ export async function main(
   try {
     const args = parseArgs(argv, {
       boolean: ["l", "d", "f", "diff", "allow-bundled", "help"],
+      string: ["env-file"],
       negatable: ["diff"],
       alias: { h: "help" },
       default: { diff: undefined },
@@ -83,15 +88,21 @@ export async function main(
       },
     });
     const positional = args._.map(String);
-    if ((COMMANDS as readonly string[]).includes(positional[0])) {
-      command = positional.shift() as Command;
-    }
+    const named = (COMMANDS as readonly string[]).includes(positional[0]);
+    if (named) command = positional.shift() as Command;
     if (args.help) {
       out.log(HELP);
       return 0;
     }
-    if ((command === "sync" || command === "types") && positional.length) {
+    // Paths need the `sync` command, so a mistyped command isn't a path.
+    if ((!named || command === "types") && positional.length) {
       throw new ConfigError(`Unknown command ${positional[0]}\n\n${HELP}`);
+    }
+    const envFile = args["env-file"];
+    if (envFile === "") {
+      throw new ConfigError(
+        "--env-file needs a file, for example --env-file=.testing.env",
+      );
     }
     if ((command === "watch" || command === "links") && !positional.length) {
       throw new ConfigError(
@@ -111,8 +122,13 @@ export async function main(
       return 0;
     }
 
+    if (envFile !== undefined && !exists(resolve(root, envFile))) {
+      throw new ConfigError(
+        `${envFile} does not exist. Create it like .env, with the PATHIFY_TOKEN and FLOW_SERVER_URL of the server to use.`,
+      );
+    }
     // A folder without a .env is a new project (or a fresh clone): set it up.
-    if (!exists(join(root, ".env"))) {
+    if (envFile === undefined && !exists(join(root, DEFAULT_ENV_FILE))) {
       if (command !== "sync") {
         throw new ConfigError(
           `There is no .env here. Run "${RUN}" in your project folder to set it up.`,
@@ -125,8 +141,19 @@ export async function main(
       return 0;
     }
 
+    const file = envFile ?? DEFAULT_ENV_FILE;
+    if (await isExposedToGit(root, file)) {
+      out.warn(
+        `Warning: ${file} isn't ignored by git, and it holds your token. Add it to .gitignore${
+          envFile === undefined
+            ? ""
+            : ' (the line "*.env" covers every .<name>.env)'
+        }.`,
+      );
+    }
+
     if (command === "types") {
-      const env = await loadEnv(root, { requireToken: false });
+      const env = await loadEnv(root, { requireToken: false, file });
       const result = await updateTypes(root, env.serverUrl, deps.fetch);
       out.log(
         `${result.globals} globals, ${result.classes} classes, ${result.pluginGlobals} plugin globals → ${TYPES_FILE}` +
@@ -135,7 +162,13 @@ export async function main(
       return 0;
     }
 
-    const env = await loadEnv(root);
+    const env = await loadEnv(root, { file });
+    if (env.ignoredServerUrl) {
+      out.warn(
+        `Warning: FLOW_SERVER_URL is ${env.ignoredServerUrl} in the environment, but ${file} says ${env.serverUrl}; using ${file}. To use another env file, put --env-file after jsr:@usu/pathisync.`,
+      );
+    }
+    if (envFile !== undefined) out.log(`Using ${envFile} (${env.serverUrl})`);
     const check = command === "check";
     if (!check && await isStateTrackedByGit(root)) {
       out.warn(
@@ -149,6 +182,7 @@ export async function main(
       : "interactive";
     const ctx: SyncContext = {
       root,
+      server: new URL(env.serverUrl).host,
       client: createClient({ ...env, fetch: deps.fetch }),
       state: SyncState.load(root, env.serverUrl, !check),
       prompter: deps.prompter ?? inquirerPrompter,
@@ -178,6 +212,9 @@ export async function main(
       return 0;
     }
 
+    if (positional.length) {
+      ctx.scope = resolveTargets(ctx, ADAPTERS, positional).scope;
+    }
     // The editor types are fetched while the sync runs, and never fail it.
     const types = updateTypes(root, env.serverUrl, deps.fetch).catch((error) =>
       error as Error

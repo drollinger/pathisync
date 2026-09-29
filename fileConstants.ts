@@ -26,13 +26,15 @@ Description: Library of all config files for Pathify flow server.
     - Deleting a watched file never deletes anything on the server
 5. If you want the sync to resolve conflicts and unclear differences in favor of the server, use the \`-l\` flag
 6. To force syncing and creating local files in the default directory you can use the \`-lf\` flag
-7. To only see what is out of sync, use \`deno run -A jsr:@usu/pathisync check\`. It never prompts, writes or pushes. Add \`--diff\` to include diffs, and paths (\`check flows/@widgets\`) to limit it. It exits with 0 when everything is in sync, 1 when something differs and 2 on errors
-8. To see what a widget depends on, use \`deno run -A jsr:@usu/pathisync links resources/path/to/collection\`. It prints the triggers the widget's files call, the flow each trigger runs, and those flows' sub-flows. It only reads local files, and can't see URLs built at runtime
+7. To sync only what you're working on, give paths to \`sync\`: \`deno run -A jsr:@usu/pathisync sync flows/@widgets/grades\` syncs that flow and the triggers in its folder, with the usual prompts. Any path \`watch\` takes works
+8. To sync with another server, such as a testing instance, copy \`.env\` to \`.<name>.env\` (for example \`.testing.env\`), fill in that server's token and URL, and add \`--env-file=.testing.env\` to any command, after \`jsr:@usu/pathisync\`. Each server keeps its own record of the last sync. Keep \`*.env\` in \`.gitignore\`; pathisync warns about an env file git doesn't ignore
+9. To only see what is out of sync, use \`deno run -A jsr:@usu/pathisync check\`. It never prompts, writes or pushes. Add \`--diff\` to include diffs, and paths (\`check flows/@widgets\`) to limit it. It exits with 0 when everything is in sync, 1 when something differs and 2 on errors
+10. To see what a widget depends on, use \`deno run -A jsr:@usu/pathisync links resources/path/to/collection\`. It prints the triggers the widget's files call, the flow each trigger runs, and those flows' sub-flows. It only reads local files, and can't see URLs built at runtime
 
 
 ## How the sync decides
 
-- pathisync records a hash of every config at the last successful sync in \`.pathisync/state.json\`. This file is per machine and must not be committed (\`.pathisync/\` is in \`.gitignore\`)
+- pathisync records a hash of every config at the last successful sync in \`.pathisync/state.json\`, separately for each server. This file is per machine and must not be committed (\`.pathisync/\` is in \`.gitignore\`)
 - With that record, pathisync knows which side changed:
     - only the server changed: the local copy is updated without asking
     - only the local copy changed: you're offered a push
@@ -107,7 +109,7 @@ Description: Library of all config files for Pathify flow server.
 
 - config file: All inclusive term for any flow, shared config, trigger, or resource used by Pathify's system
 - collection: A grouping of resources bound under the same \`\\_collection.json\` file
-- prod/server: Refers to the flow server where config files are used in the live production environment
+- prod/server: Refers to the flow server where config files are used in the live production environment. Prompts name the server by its host, from \`FLOW_SERVER_URL\` in \`.env\` (or the file given with \`--env-file\`)
 
 
 Pathify Documentation:
@@ -115,7 +117,7 @@ Pathify Documentation:
 - https://docs.flow.campus.app/
 `;
 
-export const gitignoreLines = [".DS_Store", ".env", ".pathisync/"];
+export const gitignoreLines = [".DS_Store", ".env", "*.env", ".pathisync/"];
 
 export const env = `# Add your environment variables here
 # Generate a token from Pathify by visiting https://<your.flow.server>/auth/s2s/token/create

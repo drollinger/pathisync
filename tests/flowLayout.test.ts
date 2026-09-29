@@ -142,7 +142,7 @@ Deno.test("a server flow that can't be laid out isn't offered for creation", asy
   ]);
   assertEquals(interactive.prompter.prompts[0].choices, [
     "Nothing",
-    "Delete remote prod flow",
+    "Delete flow on flow.test",
     "Show full diff",
   ]);
 });

@@ -1,12 +1,12 @@
 {
   "name": "@usu/pathisync",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "license": "MIT",
   "exports": "./main.ts",
   "tasks": {
     "test": "deno test -A --no-check=remote tests/",
     "check": "deno fmt --check && deno lint && deno check main.ts tasks/*.ts tests/*.ts",
-    "roundtrip": "deno run --allow-read tasks/roundtrip.ts"
+    "roundtrip": "deno run --allow-read tasks/roundtrip.ts",
   },
   "imports": {
     "@std/assert": "jsr:@std/assert@^1.0.19",
@@ -19,15 +19,15 @@
     "diff": "npm:diff@^8.0.4",
     "inquirer": "npm:inquirer@^9.3.8",
     // Tests only: checks that generated declarations type-check.
-    "typescript": "npm:typescript@^5.9.2"
+    "typescript": "npm:typescript@^5.9.2",
   },
   "fmt": {
-    "exclude": ["docs/", "tests/fixtures/"]
+    "exclude": ["docs/", "tests/fixtures/"],
   },
   "lint": {
-    "exclude": ["docs/", "tests/fixtures/"]
+    "exclude": ["docs/", "tests/fixtures/"],
   },
   "publish": {
-    "exclude": ["tests/", "tasks/", "docs/", ".github/", ".vscode/"]
-  }
+    "exclude": ["tests/", "tasks/", "docs/", ".github/", ".vscode/"],
+  },
 }

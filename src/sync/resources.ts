@@ -224,13 +224,13 @@ async function planCollection(
   const labels: Partial<Record<Action, string>> = bothSides
     ? {
       pull: "Overwrite local _collection.json",
-      push: "Push local _collection.json to remote prod",
+      push: `Push local _collection.json to ${ctx.server}`,
     }
     : {
-      push: "Push new collection to prod",
+      push: `Push new collection to ${ctx.server}`,
       "create-local": "Create new local collection",
       "delete-local": "Delete local collection",
-      "delete-remote": "Delete remote prod collection",
+      "delete-remote": `Delete collection on ${ctx.server}`,
     };
 
   // Resources, matched by id.
@@ -292,11 +292,11 @@ async function planCollection(
           : [],
         labels: info.dangling
           ? {
-            "create-local": `Save prods resource to ${accessor}`,
+            "create-local": `Save ${ctx.server}'s resource to ${accessor}`,
             "delete-local":
               "Remove resource listed in the local _collection.json file",
             "delete-remote":
-              "Delete remote prod resource (will also remove local _collection.json resource)",
+              `Delete resource on ${ctx.server} (will also remove local _collection.json resource)`,
           }
           : {},
         extraOptions: info.dangling ? ["delete-local"] : [],

@@ -25,6 +25,7 @@ All commands are `deno run -A jsr:@usu/pathisync [command]`:
 | Command           | What it does                                                                    |
 | ----------------- | ------------------------------------------------------------------------------- |
 | (none)            | Sync flows, shared configs, triggers and resources, and update the editor types |
+| `sync [paths]`    | Sync only a flow folder, config, file or folder                                 |
 | `check [paths]`   | Report what differs; never prompt, write or push. Exit 0/1/2                    |
 | `watch <paths>`   | Push saved changes for a flow folder, config, file or folder                    |
 | `links <widgets>` | Print the triggers a widget calls, their flows and sub-flows                    |
@@ -32,7 +33,23 @@ All commands are `deno run -A jsr:@usu/pathisync [command]`:
 
 Flags: `-d` (offer deletes), `-l` (resolve conflicts in favor of the server),
 `-f` (with `-l`, create new files in the default folder), `--no-diff`, `--diff`
-(with `check`), `--allow-bundled`.
+(with `check`), `--allow-bundled`, `--env-file <file>`.
+
+# Other servers
+
+`.env` is used by default. To sync with another server, such as a testing
+instance, put its token and URL in another env file and pass it to any command:
+
+```
+deno run -A jsr:@usu/pathisync sync flows/@widgets/grades --env-file=.testing.env
+```
+
+- Put `--env-file` after `jsr:@usu/pathisync`. Before it, Deno reads the file
+  itself and `.env` still wins; pathisync warns when that happens
+- Name env files `.<name>.env` so the `*.env` line in `.gitignore` covers them.
+  Pathisync warns about any env file git doesn't ignore
+- `.pathisync/state.json` keeps a separate record for each server URL, so
+  syncing with one server doesn't make the next sync with another ask more
 
 # What's in a project
 

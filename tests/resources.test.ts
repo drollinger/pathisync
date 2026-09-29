@@ -76,7 +76,7 @@ Deno.test("a changed resource shows a text diff; pushing sends the whole collect
   assertEquals(ctx.prompter.prompts[0].choices, [
     "Nothing",
     "Overwrite local resource",
-    "Push local resource to remote prod",
+    "Push local resource to flow.test",
     "Show full diff",
   ]);
   assertStringIncludes(ctx.out.text(), "-<p>A</p>");
@@ -142,7 +142,7 @@ Deno.test("a _collection.json difference offers overwrite or push", async () => 
   assertEquals(ctx.prompter.prompts[0].choices, [
     "Nothing",
     "Overwrite local _collection.json",
-    "Push local _collection.json to remote prod",
+    "Push local _collection.json to flow.test",
     "Show full diff",
   ]);
   assertEquals(server.get("resourceCollections", "c")!.description, "local");
@@ -156,8 +156,8 @@ Deno.test("an entry whose file is missing offers to save the server's copy or re
   const ctx = await sync(root, server, { allowDelete: true }, ["create-local"]);
   assertEquals(ctx.prompter.prompts[0].choices, [
     "Nothing",
-    "Save prods resource to /widgets/a.js",
-    "Delete remote prod resource (will also remove local _collection.json resource)",
+    "Save flow.test's resource to /widgets/a.js",
+    "Delete resource on flow.test (will also remove local _collection.json resource)",
     "Remove resource listed in the local _collection.json file",
     "Show full diff",
   ]);
@@ -221,7 +221,7 @@ Deno.test("a new local collection is pushed with its files' bytes", async () => 
   const ctx = await sync(root, server, {}, ["push"]);
   assertEquals(ctx.prompter.prompts[0].choices, [
     "Nothing",
-    "Push new collection to prod",
+    "Push new collection to flow.test",
     "Show full diff",
   ]);
   assertEquals(remoteBytes(server, "js"), "console.log(1)");

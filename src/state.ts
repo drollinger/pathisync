@@ -5,13 +5,36 @@ import { ensureDirSync } from "@std/fs";
 import { join } from "@std/path";
 
 export const STATE_DIR = ".pathisync";
-const STATE_VERSION = 1;
+const STATE_VERSION = 2;
 
-type StateFile = {
-  version: number;
-  server: string;
-  entries: Record<string, string>;
-};
+type Entries = Record<string, string>;
+
+/** One record per server URL, so switching env files keeps each server's. */
+type StateFile = { version: 2; servers: Record<string, Entries> };
+
+/** Before version 2 the file held one server. */
+type StateFileV1 = { version: 1; server: string; entries: Entries };
+
+/** Every server's record in the file; empty if missing or unreadable. */
+function readServers(root: string): Record<string, Entries> {
+  try {
+    const file = JSON.parse(
+      Deno.readTextFileSync(SyncState.path(root)),
+    ) as StateFile | StateFileV1;
+    const valid = (e: unknown): e is Entries => !!e && typeof e === "object";
+    if (file.version === STATE_VERSION) {
+      return Object.fromEntries(
+        Object.entries(file.servers ?? {}).filter(([, e]) => valid(e)),
+      );
+    }
+    if (file.version === 1 && valid(file.entries)) {
+      return { [file.server]: file.entries };
+    }
+  } catch (_) {
+    // No record yet: behave as before pathisync kept one.
+  }
+  return {};
+}
 
 export class SyncState {
   #entries: Map<string, string>;
@@ -32,23 +55,16 @@ export class SyncState {
   }
 
   /**
-   * Loads the record for `server`. A missing or unreadable file, another
-   * version, or a different server URL all start an empty record.
+   * Loads the record for `server`. A missing or unreadable file, an unknown
+   * version, or a server with no record yet all start an empty record.
    */
   static load(root: string, server: string, writable = true): SyncState {
-    let entries: Record<string, string> = {};
-    try {
-      const file = JSON.parse(
-        Deno.readTextFileSync(SyncState.path(root)),
-      ) as StateFile;
-      if (
-        file.version === STATE_VERSION && file.server === server &&
-        file.entries && typeof file.entries === "object"
-      ) entries = file.entries;
-    } catch (_) {
-      // No record yet: behave as before pathisync kept one.
-    }
-    return new SyncState(root, server, entries, writable);
+    return new SyncState(
+      root,
+      server,
+      readServers(root)[server] ?? {},
+      writable,
+    );
   }
 
   get(key: string): string | undefined {
@@ -69,15 +85,21 @@ export class SyncState {
     if (this.#entries.delete(key)) this.#dirty = true;
   }
 
-  /** Writes atomically (temp file, then rename) if anything changed. */
+  /**
+   * Writes atomically (temp file, then rename) if anything changed, keeping
+   * the other servers' records.
+   */
   save() {
     if (!this.writable || !this.#dirty) return;
+    const byKey = ([a]: [string, unknown], [b]: [string, unknown]) =>
+      a < b ? -1 : a > b ? 1 : 0;
+    const servers = {
+      ...readServers(this.root),
+      [this.server]: Object.fromEntries([...this.#entries].sort(byKey)),
+    };
     const file: StateFile = {
       version: STATE_VERSION,
-      server: this.server,
-      entries: Object.fromEntries(
-        [...this.#entries].sort(([a], [b]) => a < b ? -1 : a > b ? 1 : 0),
-      ),
+      servers: Object.fromEntries(Object.entries(servers).sort(byKey)),
     };
     ensureDirSync(join(this.root, STATE_DIR));
     const path = SyncState.path(this.root);

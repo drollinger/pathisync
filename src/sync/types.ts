@@ -5,11 +5,7 @@ import type { SyncState } from "../state.ts";
 import type { Output, Prompter } from "../ui.ts";
 
 export type Kind =
-  | "flow"
-  | "sharedConfig"
-  | "trigger"
-  | "resourceCollection"
-  | "resource";
+  "flow" | "sharedConfig" | "trigger" | "resourceCollection" | "resource";
 
 /** The rows of the decision table in issue 03. */
 export type Status =
@@ -108,6 +104,8 @@ export type AdapterName = "flows" | "sharedConfigs" | "triggers" | "resources";
 
 export type SyncContext = {
   root: string;
+  /** The flow server's host */
+  server: string;
   client: Client;
   state: SyncState;
   prompter: Prompter;
