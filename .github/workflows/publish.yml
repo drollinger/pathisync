@@ -5,7 +5,11 @@ on:
       - master
 
 jobs:
+  check:
+    uses: ./.github/workflows/ci.yml
+
   publish:
+    needs: check
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -18,5 +22,20 @@ jobs:
         with:
           deno-version: v2.x
 
+      # Pushes to master without a version bump are normal; only publish
+      # versions JSR doesn't have yet.
+      - name: Check whether this version is already published
+        id: version
+        run: |
+          version=$(deno eval 'console.log(JSON.parse(Deno.readTextFileSync("deno.jsonc").replace(/^\s*\/\/.*$/gm, "")).version)')
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          if curl -fsS https://jsr.io/@usu/pathisync/meta.json | grep -q "\"$version\""; then
+            echo "published=true" >> "$GITHUB_OUTPUT"
+            echo "Version $version is already on JSR; skipping publish."
+          else
+            echo "published=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Publish package
+        if: steps.version.outputs.published == 'false'
         run: deno publish
